@@ -1,8 +1,10 @@
 import numpy as np
+from typing import Optional
 
 from enot.models import SearchSpaceModel
 from enot.optimize import EnotPretrainOptimizer
 from enot.optimize import EnotSearchOptimizer
+from enot.utils.latency.search_space_latency_calculator import initialize_latency
 
 
 def tutorial_pretrain_loop(
@@ -90,6 +92,7 @@ def tutorial_search_loop(
         train_loader,
         validation_loader,
         latency_loss_weight,
+        latency_type: Optional[str],
         scheduler=None,
 ):
     if not isinstance(search_space, SearchSpaceModel):
@@ -108,6 +111,10 @@ def tutorial_search_loop(
             'n': 0,
         }
         for inputs, labels in train_loader:
+
+            if latency_type and search_space.latency_type is None:
+                initialize_latency(latency_type, search_space, (inputs,))
+
             enot_optimizer.zero_grad()
 
             def closure():
