@@ -4,7 +4,11 @@ from typing import Optional
 from enot.models import SearchSpaceModel
 from enot.optimize import EnotPretrainOptimizer
 from enot.optimize import EnotSearchOptimizer
-from enot.utils.latency.search_space_latency_calculator import initialize_latency
+from enot.latency import initialize_latency
+from enot.latency import min_latency
+from enot.latency import mean_latency
+from enot.latency import max_latency
+from enot.latency import best_arch_latency
 
 
 def tutorial_pretrain_loop(
@@ -113,7 +117,12 @@ def tutorial_search_loop(
         for inputs, labels in train_loader:
 
             if latency_type and search_space.latency_type is None:
-                initialize_latency(latency_type, search_space, (inputs,))
+                latency_container = initialize_latency(latency_type, search_space, (inputs,))
+                print(f'Constant latency = {latency_container.constant_latency}')
+                print(f'Min, mean and max latencies of search space: '
+                      f'{min_latency(latency_container)}, '
+                      f'{mean_latency(latency_container)}, '
+                      f'{max_latency(latency_container)}')
 
             enot_optimizer.zero_grad()
 
@@ -166,7 +175,7 @@ def tutorial_search_loop(
         print('  loss:', validation_loss)
         print('  accuracy:', validation_accuracy)
         if search_space.latency_type is not None:
-            latency = search_space.forward_latency.item()
+            latency = best_arch_latency(search_space)
             print('  latency:', latency)
 
         print()
