@@ -34,3 +34,6 @@ In this tutorial we search model and resolution with best accuracy with fixed ma
 
 ### Tutorial - search space autogeneration
 This notebook describes how to generate search space automaticaly from your model.
+
+### Multigpu pretrain
+In this folder you can find .sh script to run multigpu pretrain with the correct torch distributed initialiization and .py script with pretrain part from getting started tutorial, with some multigpu related changes. Distributed search is not recommended as it is under development. Moreover, the search procedure is usually fast. At the tuning stage, you can do whatever you want. 
