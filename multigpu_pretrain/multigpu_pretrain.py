@@ -15,14 +15,14 @@ from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR
 import torch.nn as nn
 
-from enot.utils.distributed import torch_save
+from enot.distributed import torch_save
 from enot.utils.train import create_checkpoint
 from enot.models import SearchSpaceModel
 from enot.models.mobilenet import build_mobilenet
-from enot.utils.distributed import init_torch
-from enot.utils.distributed import extract_data_from_queue
-from enot.utils.distributed import is_master
-from enot.utils.distributed import sync_model
+from enot.distributed import init_torch
+from enot.distributed import extract_data_from_queue
+from enot.distributed import is_master
+from enot.distributed import sync_model
 from enot.optimize import EnotPretrainOptimizer
 
 from tutorial_utils.train import accuracy
