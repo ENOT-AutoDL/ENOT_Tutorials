@@ -1,14 +1,16 @@
-import numpy as np
 from typing import Optional
 
+import numpy as np
+import torch
+
+from enot.latency import best_arch_latency
+from enot.latency import initialize_latency
+from enot.latency import max_latency
+from enot.latency import mean_latency
+from enot.latency import min_latency
 from enot.models import SearchSpaceModel
 from enot.optimize import EnotPretrainOptimizer
 from enot.optimize import EnotSearchOptimizer
-from enot.latency import initialize_latency
-from enot.latency import min_latency
-from enot.latency import mean_latency
-from enot.latency import max_latency
-from enot.latency import best_arch_latency
 
 
 def tutorial_pretrain_loop(
@@ -63,18 +65,20 @@ def tutorial_pretrain_loop(
         print('  loss:', train_loss)
         print('  accuracy:', train_accuracy)
 
-        search_space.eval()
+        arch_to_test = [0] * len(search_space.search_variants_containers)
+        test_model = search_space.get_network_by_indexes(arch_to_test)
+        test_model.eval()
+
         validation_loss = 0
         validation_accuracy = 0
-        for inputs, labels in validation_loader:
-            search_space.sample_random_arch()
+        with torch.no_grad():
+            for inputs, labels in validation_loader:
+                pred_labels = test_model(inputs)
+                batch_loss = loss_function(pred_labels, labels)
+                batch_metric = metric_function(pred_labels, labels)
 
-            pred_labels = search_space(inputs)
-            batch_loss = loss_function(pred_labels, labels)
-            batch_metric = metric_function(pred_labels, labels)
-
-            validation_loss += batch_loss.item()
-            validation_accuracy += batch_metric.item()
+                validation_loss += batch_loss.item()
+                validation_accuracy += batch_metric.item()
 
         n = len(validation_loader)
         validation_loss /= n
@@ -159,13 +163,14 @@ def tutorial_search_loop(
 
         validation_loss = 0
         validation_accuracy = 0
-        for inputs, labels in validation_loader:
-            pred_labels = search_space(inputs)
-            batch_loss = loss_function(pred_labels, labels)
-            batch_metric = metric_function(pred_labels, labels)
+        with torch.no_grad():
+            for inputs, labels in validation_loader:
+                pred_labels = search_space(inputs)
+                batch_loss = loss_function(pred_labels, labels)
+                batch_metric = metric_function(pred_labels, labels)
 
-            validation_loss += batch_loss.item()
-            validation_accuracy += batch_metric.item()
+                validation_loss += batch_loss.item()
+                validation_accuracy += batch_metric.item()
 
         n = len(validation_loader)
         validation_loss /= n
@@ -224,13 +229,14 @@ def tutorial_train_loop(
         model.eval()
         validation_loss = 0
         validation_accuracy = 0
-        for inputs, labels in validation_loader:
-            pred_labels = model(inputs)
-            batch_loss = loss_function(pred_labels, labels)
-            batch_metric = metric_function(pred_labels, labels)
+        with torch.no_grad():
+            for inputs, labels in validation_loader:
+                pred_labels = model(inputs)
+                batch_loss = loss_function(pred_labels, labels)
+                batch_metric = metric_function(pred_labels, labels)
 
-            validation_loss += batch_loss.item()
-            validation_accuracy += batch_metric.item()
+                validation_loss += batch_loss.item()
+                validation_accuracy += batch_metric.item()
 
         n = len(validation_loader)
         validation_loss /= n
