@@ -1,5 +1,7 @@
 # ENOT_Tutorials
 Here you can find tutorials for ENOT framework.
+To get started with ENOT, you first need to install it. You can find the installation instructions here:
+https://enot-autodl.rtd.enot.ai/en/latest/installation_guide.html#installation
 
 ### 1. Tutorial - getting started
 Describes the basic steps you need to optimize an architecture:
