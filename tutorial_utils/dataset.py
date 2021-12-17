@@ -5,7 +5,11 @@ from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
+from google_drive_downloader import GoogleDriveDownloader
 from torch.utils.data import DistributedSampler
+from torchvision.datasets import ImageFolder
+from torchvision.transforms import transforms
+from torchvision.transforms.functional import InterpolationMode
 
 from enot.utils.data.csv_annotation_dataset import CsvAnnotationDataset
 from enot.utils.data.dataloaders import create_data_loader
@@ -15,9 +19,24 @@ from enot.utils.data.dataloaders import get_default_validation_transform
 _MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
+IMAGENET_10K_GD_ID = '1CkSnLFHYzGTdqZZTugrPevH9xUacw89V'
 
 create_imagenette_train_transform = partial(get_default_train_transform, mean=_MEAN, std=_STD)
 create_imagenette_validation_transform = partial(get_default_validation_transform, mean=_MEAN, std=_STD)
+
+
+def _get_imagenet_transform(
+        input_size,
+        mean=_MEAN,
+        std=_STD,
+        interpolation=InterpolationMode.BILINEAR,
+):
+    return transforms.Compose([
+        transforms.Resize(int(input_size / 0.875), interpolation=interpolation),
+        transforms.CenterCrop(input_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std, inplace=True),
+    ])
 
 
 def _create_data_loader_from_csv_annotation(
@@ -27,11 +46,13 @@ def _create_data_loader_from_csv_annotation(
         num_workers,
         shuffle,
         dist=False,
+        root_dir=None,
         **kwargs,
 ):
     dataset = CsvAnnotationDataset(
         csv_annotation_path,
         transform=dataset_transform,
+        root_dir=root_dir,
     )
     if dist:
         # In distributed setup we need to use DistributedSampler in dataloader
@@ -79,6 +100,32 @@ def download_imagenette(dataset_root_dir, imagenette_kind):
     try:
         # download dataset
         urlretrieve(url=url, filename=file_path)
+        # unpack archive
+        with tarfile.open(file_path) as dataset_archive:
+            dataset_archive.extractall(dataset_root_dir)
+    finally:
+        # remove archive file
+        if file_path.exists():
+            file_path.unlink()
+
+    return dataset_dir
+
+
+def download_imagenet10k(dataset_root_dir):
+    dataset_root_dir = Path(dataset_root_dir)
+    dataset_dir = dataset_root_dir / 'imagenet10k'
+
+    if dataset_dir.exists():
+        return dataset_dir
+
+    file_path = dataset_root_dir / 'imagenet10k.tgz'
+    try:
+        # download dataset
+        GoogleDriveDownloader.download_file_from_google_drive(
+            file_id=IMAGENET_10K_GD_ID,
+            dest_path=file_path.as_posix(),
+            overwrite=False,
+        )
         # unpack archive
         with tarfile.open(file_path) as dataset_archive:
             dataset_archive.extractall(dataset_root_dir)
@@ -199,3 +246,33 @@ def create_imagenette_dataloaders(
         tune_train_dataloader=pretrain_and_tune_train_dataloader,
         tune_validation_dataloader=pretrain_and_tune_validation_dataloader,
     )
+
+
+def create_imagenet10k_dataloaders(
+        dataset_root_dir,
+        input_size,
+        batch_size,
+        num_workers=4,
+):
+    dataset_dir = download_imagenet10k(dataset_root_dir=dataset_root_dir)
+
+    transform = _get_imagenet_transform(input_size)
+    train_dataset = ImageFolder(str(dataset_dir / 'train'), transform=transform)
+    validation_dataset = ImageFolder(str(dataset_dir / 'val'), transform=transform)
+
+    train_dataloader = create_data_loader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        drop_last=True,
+    )
+    validation_dataloader = create_data_loader(
+        validation_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+        drop_last=False,
+    )
+
+    return train_dataloader, validation_dataloader
