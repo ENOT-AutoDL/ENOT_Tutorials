@@ -5,7 +5,6 @@ from urllib.request import urlretrieve
 
 import numpy as np
 import pandas as pd
-from google_drive_downloader import GoogleDriveDownloader
 from torch.utils.data import DistributedSampler
 from torchvision.datasets import ImageFolder
 from torchvision.transforms import transforms
@@ -19,13 +18,29 @@ from enot.utils.data.dataloaders import get_default_validation_transform
 _MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-IMAGENET_10K_GD_ID = '1CkSnLFHYzGTdqZZTugrPevH9xUacw89V'
+_BASE_URL = 'https://gitlab.expasoft.com/a.yanchenko/enot-public-data/-/raw/main/tutorials'
+_DATASET_BASE_URL = f'{_BASE_URL}/datasets'
+IMAGENET_10K_URL = f'{_DATASET_BASE_URL}/imagenet10k.tar.gz'
 
 create_imagenette_train_transform = partial(get_default_train_transform, mean=_MEAN, std=_STD)
 create_imagenette_validation_transform = partial(get_default_validation_transform, mean=_MEAN, std=_STD)
 
 
-def _get_imagenet_transform(
+def imagenet_train_transform(
+        input_size,
+        mean=_MEAN,
+        std=_STD,
+        interpolation=InterpolationMode.BILINEAR,
+):
+    return transforms.Compose([
+        transforms.RandomResizedCrop(input_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std, inplace=True),
+    ])
+
+
+def imagenet_valid_transform(
         input_size,
         mean=_MEAN,
         std=_STD,
@@ -121,11 +136,7 @@ def download_imagenet10k(dataset_root_dir):
     file_path = dataset_root_dir / 'imagenet10k.tgz'
     try:
         # download dataset
-        GoogleDriveDownloader.download_file_from_google_drive(
-            file_id=IMAGENET_10K_GD_ID,
-            dest_path=file_path.as_posix(),
-            overwrite=False,
-        )
+        urlretrieve(url=IMAGENET_10K_URL, filename=file_path.as_posix())
         # unpack archive
         with tarfile.open(file_path) as dataset_archive:
             dataset_archive.extractall(dataset_root_dir)
@@ -248,6 +259,48 @@ def create_imagenette_dataloaders(
     )
 
 
+def create_imagenette_dataloaders_for_pruning(
+        dataset_root_dir,
+        project_dir,
+        input_size,
+        batch_size,
+        num_workers=4,
+        imagenette_kind='imagenette2',
+        random_seed=42,
+        dist=False,
+):
+    dataset_dir = download_imagenette(
+        dataset_root_dir=dataset_root_dir, imagenette_kind=imagenette_kind,
+    )
+    annotations = create_imagenette_annotation(
+        dataset_dir=dataset_dir, project_dir=project_dir, random_seed=random_seed,
+    )
+
+    train_transform = imagenet_train_transform(input_size)
+    validation_transform = imagenet_valid_transform(input_size)
+
+    train_dataloader = _create_data_loader_from_csv_annotation(
+        csv_annotation_path=annotations['train'],
+        dataset_transform=train_transform,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=True,
+        drop_last=True,
+        dist=dist,
+    )
+    validation_dataloader = _create_data_loader_from_csv_annotation(
+        csv_annotation_path=annotations['validation'],
+        dataset_transform=validation_transform,
+        batch_size=batch_size,
+        num_workers=num_workers,
+        shuffle=False,
+        drop_last=False,
+        dist=dist,
+    )
+
+    return train_dataloader, validation_dataloader
+
+
 def create_imagenet10k_dataloaders(
         dataset_root_dir,
         input_size,
@@ -256,7 +309,7 @@ def create_imagenet10k_dataloaders(
 ):
     dataset_dir = download_imagenet10k(dataset_root_dir=dataset_root_dir)
 
-    transform = _get_imagenet_transform(input_size)
+    transform = imagenet_valid_transform(input_size)
     train_dataset = ImageFolder(str(dataset_dir / 'train'), transform=transform)
     validation_dataset = ImageFolder(str(dataset_dir / 'val'), transform=transform)
 
