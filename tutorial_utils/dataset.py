@@ -1,4 +1,3 @@
-import os
 import tarfile
 from functools import partial
 from pathlib import Path
@@ -183,11 +182,10 @@ def create_imagenette_annotation(dataset_dir, project_dir, random_seed=42):
     search_path = project_dir / 'search.csv'
 
     # Save the annotations
-    if not os.path.exists(train_path) or not os.path.exists(validation_path) or not os.path.exists(search_path) or not os.path.exists(test_path):
-    	train_df.to_csv(train_path, index=False)
-    	validation_df.to_csv(validation_path, index=False)
-    	search_df.to_csv(search_path, index=False)
-    	test_df.to_csv(test_path, index=False)
+    train_df.to_csv(train_path, index=False)
+    validation_df.to_csv(validation_path, index=False)
+    search_df.to_csv(search_path, index=False)
+    test_df.to_csv(test_path, index=False)
 
     return {
         'train': train_path,
