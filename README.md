@@ -1,10 +1,51 @@
 # ENOT_Tutorials
+## Basic examples
 Here you can find tutorials for ENOT framework.
 
 To get started with ENOT, you first need to install it. You can find the
 installation instructions here:
 https://enot-autodl.rtd.enot.ai/en/latest/installation_guide.html#installation
 
+### 1. Tutorial - automatic quantization for enot-lite
+This notebook shows how to apply enot-autodl framework for
+automatic quantization to create quantized model for enot-lite framework.
+
+### 2. Tutorial - automatic pruning
+This notebook shows how to apply enot-autodl framework for
+automatic network pruning and fine-tuning.
+
+### 3. Tutorial - automatic pruning (manual)
+This notebook shows how to apply enot-autodl framework for
+automatic network pruning and fine-tuning. Gradient accumulation is performed
+manually.
+
+### 4. Tutorial - Ultralytics YOLO-v5 quantization
+This notebook shows how to apply enot-autodl framework for
+automatic network quantization of Ultralytics YOLO-v5.
+
+
+### Multigpu pretrain example
+In this folder you can find
+[.sh script](multigpu_pretrain/run_multigpu_pretrain.sh) for running multi-gpu
+pretrain. You can change its configuration to run on single GPU, on multiple
+GPU within a single node, or on multiple compute nodes with multiple GPUs.
+
+The second file in this folder is a
+[.py script](multigpu_pretrain/multigpu_pretrain.py) which is launched by .sh
+script. This script uses functions from other tutorials, but it is adapted to run
+in distributed manner. This script should be viewed as a reference point for
+user-defined distributed pretrain scripts.
+
+Distributed search is not recommended as it is under development. Moreover, the
+search procedure is usually relatively fast. At the tuning stage, you will have
+a regular model without any of the ENOT specifics, so it is your responsibility
+to write correct distributed code (probably by wrapping found model with
+[DistributedDataParallel module](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html)).
+
+
+## Neural Architecture Search examples
+In the "advanced" folder you can find tutorials for NAS procedure.
+ 
 ### 1. Tutorial - getting started
 Describes the basic steps you need to optimize an architecture:
 * Create your model and move it into SearchSpace;
@@ -55,37 +96,3 @@ EfficientNet-V2 implementation.
 This notebook shows an advanced example usage of ENOT framework. We will show
 how to use angular margin loss for metric learning task.
 
-### 10. Tutorial - adding custom operations for model builder
-This notebook describes the ways to implement your own operations, and how to
-use them with the model builder.
-
-### 11. Experimental - Tutorial - automatic quantization for enot-lite
-This experimental notebook shows how to apply enot-autodl framework for
-automatic quantization to create quantized model for enot-lite framework.
-
-### 12. Experimental - Tutorial - automatic pruning
-This experimental notebook shows how to apply enot-autodl framework for
-automatic network pruning and fine-tuning.
-
-### 13. Experimental - Tutorial - automatic pruning (manual)
-This experimental notebook shows how to apply enot-autodl framework for
-automatic network pruning and fine-tuning. Gradient accumulation is performed
-manually.
-
-### Multigpu pretrain example
-In this folder you can find
-[.sh script](multigpu_pretrain/run_multigpu_pretrain.sh) for running multi-gpu
-pretrain. You can change its configuration to run on single GPU, on multiple
-GPU within a single node, or on multiple compute nodes with multiple GPUs.
-
-The second file in this folder is a
-[.py script](multigpu_pretrain/multigpu_pretrain.py) which is launched by .sh
-script. This script uses functions from other tutorials, but is adapted to run
-in distributed manner. This script should be viewed as a reference point for
-user-defined distributed pretrain scripts.
-
-Distributed search is not recommended as it is under development. Moreover, the
-search procedure is usually relatively fast. At the tuning stage, you will have
-a regular model without any of the ENOT specifics, so it is your responsibility
-to write correct distributed code (probably by wrapping found model with
-[DistributedDataParallel module](https://pytorch.org/docs/stable/generated/torch.nn.parallel.DistributedDataParallel.html)).
