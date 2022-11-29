@@ -4,7 +4,7 @@ metric synchronization, initialization of process groups, locking IO operations 
 
 The only exception is:
 
-<<< We synchronize model buffers and gradients in EnotPretrainOptimizer! (As DDP does) >>>
+<<< We synchronize model buffers and gradients in PretrainOptimizer! (As DDP does) >>>
 
 So, you should NOT use DistributedDataParallel in pretrain loop, as we do it's functionality in our code.
 For easier distributed package initialization you can use enot.utils.distributed.init_torch function.
@@ -31,11 +31,11 @@ from enot.distributed import sync_model
 from enot.logging import prepare_log
 from enot.models import SearchSpaceModel
 from enot.models.mobilenet import build_mobilenet
-from enot.optimize import EnotPretrainOptimizer
+from enot.optimize import PretrainOptimizer
 
-ENOT_HOME_DIR = Path.home() / '.enot'
-ENOT_DATASETS_DIR = ENOT_HOME_DIR / 'datasets'
-PROJECT_DIR = ENOT_HOME_DIR / 'distributed_pretrain'
+HOME_DIR = Path.home() / '.optimization_experiments'
+DATASETS_DIR = HOME_DIR / 'datasets'
+PROJECT_DIR = HOME_DIR / 'distributed_pretrain'
 
 SEARCH_OPS = [
     'MIB_k=3_t=6',
@@ -50,8 +50,8 @@ LR = 0.06
 
 def main():
 
-    ENOT_HOME_DIR.mkdir(exist_ok=True)
-    ENOT_DATASETS_DIR.mkdir(exist_ok=True)
+    HOME_DIR.mkdir(exist_ok=True)
+    DATASETS_DIR.mkdir(exist_ok=True)
     PROJECT_DIR.mkdir(exist_ok=True)
 
     prepare_log(PROJECT_DIR / 'experiments' / 'multigpu_example_2x2_config_v1')
@@ -61,7 +61,7 @@ def main():
     n_workers = get_world_size()
 
     dataloaders = create_imagenette_dataloaders(
-        ENOT_DATASETS_DIR,
+        DATASETS_DIR,
         PROJECT_DIR,
         input_size=(224, 224),
         batch_size=64,
@@ -94,7 +94,7 @@ def main():
     # Dataloader for master-only validation.
     if is_master():
         dataloaders = create_imagenette_dataloaders(
-            ENOT_DATASETS_DIR,
+            DATASETS_DIR,
             PROJECT_DIR,
             input_size=(224, 224),
             batch_size=64,
@@ -107,8 +107,8 @@ def main():
     # We should use ``search_space.model_parameters()`` parameters in pre-train phase.
     optimizer = SGD(params=search_space.model_parameters(), lr=LR * n_workers, momentum=0.9, weight_decay=1e-4)
 
-    # Wrap regular optimizer with ``EnotPretrainOptimizer``, and use it later.
-    enot_optimizer = EnotPretrainOptimizer(search_space=search_space, optimizer=optimizer)
+    # Wrap regular optimizer with ``PretrainOptimizer``, and use it later.
+    pretrain_optimizer = PretrainOptimizer(search_space=search_space, optimizer=optimizer)
 
     scheduler = CosineAnnealingLR(optimizer, T_max=len_train_loader * N_EPOCHS)
     scheduler = WarmupScheduler(scheduler, warmup_steps=len_train_loader * N_WARMUP_EPOCHS)
@@ -148,7 +148,7 @@ def main():
                 if not search_space.output_distribution_optimization_enabled:
                     search_space.initialize_output_distribution_optimization(inputs)
 
-            enot_optimizer.zero_grad()
+            pretrain_optimizer.zero_grad()
 
             # Executable closure with forward-backward passes.
             def closure():
@@ -161,7 +161,7 @@ def main():
                 train_metrics_acc['accuracy'] += batch_metric.item()
                 train_metrics_acc['n'] += 1
 
-            enot_optimizer.step(closure)  # Performing enot optimizer step, which internally calls closure.
+            pretrain_optimizer.step(closure)  # Performing enot optimizer step, which internally calls closure.
             if scheduler is not None:
                 scheduler.step()
 

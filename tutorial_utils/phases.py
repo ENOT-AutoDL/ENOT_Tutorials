@@ -9,24 +9,24 @@ from enot.latency import max_latency
 from enot.latency import mean_latency
 from enot.latency import min_latency
 from enot.models import SearchSpaceModel
-from enot.optimize import EnotPretrainOptimizer
-from enot.optimize import EnotSearchOptimizer
+from enot.optimize import PretrainOptimizer
+from enot.optimize import SearchOptimizer
 
 
 def tutorial_pretrain_loop(
-        epochs,
-        search_space,
-        enot_optimizer,
-        metric_function,
-        loss_function,
-        train_loader,
-        validation_loader,
-        scheduler=None,
+    epochs,
+    search_space,
+    pretrain_optimizer,
+    metric_function,
+    loss_function,
+    train_loader,
+    validation_loader,
+    scheduler=None,
 ):
     if not isinstance(search_space, SearchSpaceModel):
         raise TypeError('search_space must be instance of SearchSpaceModel')
-    if not isinstance(enot_optimizer, EnotPretrainOptimizer):
-        raise TypeError('enot_optimizer must be instance of EnotPretrainOptimizer')
+    if not isinstance(pretrain_optimizer, PretrainOptimizer):
+        raise TypeError('pretrain_optimizer must be instance of PretrainOptimizer')
 
     for epoch in range(epochs):
 
@@ -42,7 +42,7 @@ def tutorial_pretrain_loop(
             if not search_space.output_distribution_optimization_enabled:
                 search_space.initialize_output_distribution_optimization(inputs)
 
-            enot_optimizer.zero_grad()
+            pretrain_optimizer.zero_grad()
 
             def closure():
                 pred_labels = search_space(inputs)
@@ -54,12 +54,12 @@ def tutorial_pretrain_loop(
                 train_metrics_acc['accuracy'] += batch_metric.item()
                 train_metrics_acc['n'] += 1
 
-            enot_optimizer.step(closure)
+            pretrain_optimizer.step(closure)
             if scheduler is not None:
                 scheduler.step()
 
-        train_loss = train_metrics_acc['loss']/train_metrics_acc['n']
-        train_accuracy = train_metrics_acc['accuracy']/train_metrics_acc['n']
+        train_loss = train_metrics_acc['loss'] / train_metrics_acc['n']
+        train_accuracy = train_metrics_acc['accuracy'] / train_metrics_acc['n']
 
         print('train metrics:')
         print('  loss:', train_loss)
@@ -92,21 +92,21 @@ def tutorial_pretrain_loop(
 
 
 def tutorial_search_loop(
-        epochs,
-        search_space,
-        enot_optimizer,
-        metric_function,
-        loss_function,
-        train_loader,
-        validation_loader,
-        latency_loss_weight,
-        latency_type: Optional[str],
-        scheduler=None,
+    epochs,
+    search_space,
+    search_optimizer,
+    metric_function,
+    loss_function,
+    train_loader,
+    validation_loader,
+    latency_loss_weight,
+    latency_type: Optional[str],
+    scheduler=None,
 ):
     if not isinstance(search_space, SearchSpaceModel):
         raise TypeError('search_space must be instance of SearchSpaceModel')
-    if not isinstance(enot_optimizer, EnotSearchOptimizer):
-        raise TypeError('enot_optimizer must be instance of EnotSearchOptimizer')
+    if not isinstance(search_optimizer, SearchOptimizer):
+        raise TypeError('search_optimizer must be instance of SearchOptimizer')
 
     for epoch in range(epochs):
 
@@ -123,12 +123,14 @@ def tutorial_search_loop(
             if latency_type and search_space.latency_type is None:
                 latency_container = initialize_latency(latency_type, search_space, (inputs,))
                 print(f'Constant latency = {latency_container.constant_latency}')
-                print(f'Min, mean and max latencies of search space: '
-                      f'{min_latency(latency_container)}, '
-                      f'{mean_latency(latency_container)}, '
-                      f'{max_latency(latency_container)}')
+                print(
+                    f'Min, mean and max latencies of search space: '
+                    f'{min_latency(latency_container)}, '
+                    f'{mean_latency(latency_container)}, '
+                    f'{max_latency(latency_container)}'
+                )
 
-            enot_optimizer.zero_grad()
+            search_optimizer.zero_grad()
 
             def closure():
                 pred_labels = search_space(inputs)
@@ -144,12 +146,12 @@ def tutorial_search_loop(
                 train_metrics_acc['accuracy'] += batch_metric.item()
                 train_metrics_acc['n'] += 1
 
-            enot_optimizer.step(closure)
+            search_optimizer.step(closure)
             if scheduler is not None:
                 scheduler.step()
 
-        train_loss = train_metrics_acc['loss']/train_metrics_acc['n']
-        train_accuracy = train_metrics_acc['accuracy']/train_metrics_acc['n']
+        train_loss = train_metrics_acc['loss'] / train_metrics_acc['n']
+        train_accuracy = train_metrics_acc['accuracy'] / train_metrics_acc['n']
         arch_probabilities = np.array(search_space.architecture_probabilities)
 
         print('train metrics:')
@@ -187,14 +189,14 @@ def tutorial_search_loop(
 
 
 def tutorial_train_loop(
-        epochs,
-        model,
-        optimizer,
-        metric_function,
-        loss_function,
-        train_loader,
-        validation_loader,
-        scheduler=None,
+    epochs,
+    model,
+    optimizer,
+    metric_function,
+    loss_function,
+    train_loader,
+    validation_loader,
+    scheduler=None,
 ):
     for epoch in range(epochs):
 

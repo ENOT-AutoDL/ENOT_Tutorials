@@ -12,9 +12,9 @@ Scheduler = torch.optim.lr_scheduler._LRScheduler
 
 
 def accuracy(
-        prediction: torch.Tensor,
-        target: torch.Tensor,
-        topk: Tuple[int] = (1,),
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    topk: Tuple[int] = (1,),
 ) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Calculates prediction accuracy.
 
@@ -51,7 +51,6 @@ def accuracy(
 
 
 class _ApplyAndRestoreLR:
-
     def __init__(self, optimizer: torch.optim.Optimizer, new_lr: List[float]):
         self.optimizer = optimizer
         self.new_lr = new_lr
@@ -78,10 +77,11 @@ class WarmupScheduler(Scheduler):
     loop.
 
     """
+
     def __init__(
-            self,
-            scheduler: Scheduler,
-            warmup_steps: int = 1000,
+        self,
+        scheduler: Scheduler,
+        warmup_steps: int = 1000,
     ):
         """
         Parameters

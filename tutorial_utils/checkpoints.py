@@ -4,7 +4,7 @@ import torch
 from packaging.version import parse as parse_pkg_version
 
 _BASE_URL = 'https://gitlab.expasoft.com/a.yanchenko/enot-public-data/-/raw/main/tutorials'
-_CHKP_BASE_URL = f'{_BASE_URL}/checkpoints'
+_CHKP_BASE_URL = f'{_BASE_URL}/checkpoints_renamed'
 _ONNX_BASE_URL = f'{_BASE_URL}/onnx'
 
 # Checkpoints:
