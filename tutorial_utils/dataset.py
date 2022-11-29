@@ -27,42 +27,46 @@ create_imagenette_validation_transform = partial(get_default_validation_transfor
 
 
 def imagenet_train_transform(
-        input_size,
-        mean=_MEAN,
-        std=_STD,
-        interpolation=InterpolationMode.BILINEAR,
+    input_size,
+    mean=_MEAN,
+    std=_STD,
+    interpolation=InterpolationMode.BILINEAR,
 ):
-    return transforms.Compose([
-        transforms.RandomResizedCrop(input_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std, inplace=True),
-    ])
+    return transforms.Compose(
+        [
+            transforms.RandomResizedCrop(input_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std, inplace=True),
+        ]
+    )
 
 
 def imagenet_valid_transform(
-        input_size,
-        mean=_MEAN,
-        std=_STD,
-        interpolation=InterpolationMode.BILINEAR,
+    input_size,
+    mean=_MEAN,
+    std=_STD,
+    interpolation=InterpolationMode.BILINEAR,
 ):
-    return transforms.Compose([
-        transforms.Resize(int(input_size / 0.875), interpolation=interpolation),
-        transforms.CenterCrop(input_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean, std, inplace=True),
-    ])
+    return transforms.Compose(
+        [
+            transforms.Resize(int(input_size / 0.875), interpolation=interpolation),
+            transforms.CenterCrop(input_size),
+            transforms.ToTensor(),
+            transforms.Normalize(mean, std, inplace=True),
+        ]
+    )
 
 
 def _create_data_loader_from_csv_annotation(
-        csv_annotation_path,
-        dataset_transform,
-        batch_size,
-        num_workers,
-        shuffle,
-        dist=False,
-        root_dir=None,
-        **kwargs,
+    csv_annotation_path,
+    dataset_transform,
+    batch_size,
+    num_workers,
+    shuffle,
+    dist=False,
+    root_dir=None,
+    **kwargs,
 ):
     dataset = CsvAnnotationDataset(
         csv_annotation_path,
@@ -163,16 +167,12 @@ def create_imagenette_annotation(dataset_dir, project_dir, random_seed=42):
     validation_df = _collect_paths(val_dir, name_to_int)
 
     # Make the final splits. In this example val, optim, and test splits are the same size
-    test_df = pd.concat(
-        group.sample(frac=0.5, random_state=random_seed)
-        for _, group in validation_df.groupby('label')
-    )
+    test_df = pd.concat(group.sample(frac=0.5, random_state=random_seed) for _, group in validation_df.groupby('label'))
     validation_df = validation_df.loc[~validation_df.filepath.isin(test_df.filepath)]
 
     test_class_sizes = test_df.label.value_counts()
     search_df = pd.concat(
-        group.sample(test_class_sizes[label], random_state=random_seed)
-        for label, group in train_df.groupby('label')
+        group.sample(test_class_sizes[label], random_state=random_seed) for label, group in train_df.groupby('label')
     )
     train_df = train_df.loc[~train_df.filepath.isin(search_df.filepath)]
 
@@ -196,20 +196,23 @@ def create_imagenette_annotation(dataset_dir, project_dir, random_seed=42):
 
 
 def create_imagenette_dataloaders(
-        dataset_root_dir,
-        project_dir,
-        input_size,
-        batch_size,
-        num_workers=4,
-        imagenette_kind='imagenette2',
-        random_seed=42,
-        dist=False,
+    dataset_root_dir,
+    project_dir,
+    input_size,
+    batch_size,
+    num_workers=4,
+    imagenette_kind='imagenette2',
+    random_seed=42,
+    dist=False,
 ):
     dataset_dir = download_imagenette(
-        dataset_root_dir=dataset_root_dir, imagenette_kind=imagenette_kind,
+        dataset_root_dir=dataset_root_dir,
+        imagenette_kind=imagenette_kind,
     )
     annotations = create_imagenette_annotation(
-        dataset_dir=dataset_dir, project_dir=project_dir, random_seed=random_seed,
+        dataset_dir=dataset_dir,
+        project_dir=project_dir,
+        random_seed=random_seed,
     )
 
     train_transform = create_imagenette_train_transform(input_size)
@@ -260,20 +263,23 @@ def create_imagenette_dataloaders(
 
 
 def create_imagenette_dataloaders_for_pruning(
-        dataset_root_dir,
-        project_dir,
-        input_size,
-        batch_size,
-        num_workers=4,
-        imagenette_kind='imagenette2',
-        random_seed=42,
-        dist=False,
+    dataset_root_dir,
+    project_dir,
+    input_size,
+    batch_size,
+    num_workers=4,
+    imagenette_kind='imagenette2',
+    random_seed=42,
+    dist=False,
 ):
     dataset_dir = download_imagenette(
-        dataset_root_dir=dataset_root_dir, imagenette_kind=imagenette_kind,
+        dataset_root_dir=dataset_root_dir,
+        imagenette_kind=imagenette_kind,
     )
     annotations = create_imagenette_annotation(
-        dataset_dir=dataset_dir, project_dir=project_dir, random_seed=random_seed,
+        dataset_dir=dataset_dir,
+        project_dir=project_dir,
+        random_seed=random_seed,
     )
 
     train_transform = imagenet_train_transform(input_size)
@@ -302,10 +308,10 @@ def create_imagenette_dataloaders_for_pruning(
 
 
 def create_imagenet10k_dataloaders(
-        dataset_root_dir,
-        input_size,
-        batch_size,
-        num_workers=4,
+    dataset_root_dir,
+    input_size,
+    batch_size,
+    num_workers=4,
 ):
     dataset_dir = download_imagenet10k(dataset_root_dir=dataset_root_dir)
 

@@ -30,10 +30,10 @@ import os
 import sys
 from pathlib import Path
 from threading import Thread
-from enot_lite.type import ModelType
 
 import numpy as np
 import torch
+from enot_lite.type import ModelType
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
@@ -42,22 +42,34 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
+from enot_lite.backend import BackendFactory
+from enot_lite.type import BackendType
 from models.common import DetectMultiBackend
 from utils.callbacks import Callbacks
 from utils.dataloaders import create_dataloader
-from utils.general import (LOGGER, box_iou, check_dataset, check_img_size, check_requirements, check_yaml,
-                           coco80_to_coco91_class, colorstr, increment_path, non_max_suppression, print_args,
-                           scale_coords, xywh2xyxy, xyxy2xywh)
-from utils.metrics import ConfusionMatrix, ap_per_class
-from utils.plots import output_to_target, plot_images, plot_val_study
-from utils.torch_utils import select_device, time_sync
+from utils.general import LOGGER
+from utils.general import box_iou
+from utils.general import check_dataset
+from utils.general import check_img_size
+from utils.general import check_requirements
+from utils.general import check_yaml
+from utils.general import coco80_to_coco91_class
+from utils.general import colorstr
+from utils.general import increment_path
+from utils.general import non_max_suppression
+from utils.general import print_args
+from utils.general import scale_coords
+from utils.general import xywh2xyxy
+from utils.general import xyxy2xywh
+from utils.metrics import ConfusionMatrix
+from utils.metrics import ap_per_class
+from utils.plots import output_to_target
+from utils.plots import plot_images
+from utils.plots import plot_val_study
+from utils.torch_utils import select_device
+from utils.torch_utils import time_sync
 
 
-from enot_lite.backend import BackendFactory
-from enot_lite.type import BackendType
-            
-            
-            
 def save_one_txt(predn, save_conf, shape, file):
     # Save one txt result
     gn = torch.tensor(shape)[[1, 0, 1, 0]]  # normalization gain whwh
@@ -74,10 +86,14 @@ def save_one_json(predn, jdict, path, class_map):
     box = xyxy2xywh(predn[:, :4])  # xywh
     box[:, :2] -= box[:, 2:] / 2  # xy center to top-left corner
     for p, b in zip(predn.tolist(), box.tolist()):
-        jdict.append({'image_id': image_id,
-                      'category_id': class_map[int(p[5])],
-                      'bbox': [round(x, 3) for x in b],
-                      'score': round(p[4], 5)})
+        jdict.append(
+            {
+                'image_id': image_id,
+                'category_id': class_map[int(p[5])],
+                'bbox': [round(x, 3) for x in b],
+                'score': round(p[4], 5),
+            }
+        )
 
 
 def process_batch(detections, labels, iouv):
@@ -105,36 +121,37 @@ def process_batch(detections, labels, iouv):
 
 
 @torch.no_grad()
-def run(data,
-        weights=None,  # model.pt path(s)
-        batch_size=32,  # batch size
-        imgsz=640,  # inference size (pixels)
-        conf_thres=0.001,  # confidence threshold
-        iou_thres=0.6,  # NMS IoU threshold
-        task='val',  # train, val, test, speed or study
-        device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
-        workers=8,  # max dataloader workers (per RANK in DDP mode)
-        single_cls=False,  # treat as single-class dataset
-        augment=False,  # augmented inference
-        verbose=False,  # verbose output
-        save_txt=False,  # save results to *.txt
-        save_hybrid=False,  # save label+prediction hybrid results to *.txt
-        save_conf=False,  # save confidences in --save-txt labels
-        save_json=False,  # save a COCO-JSON results file
-        project=ROOT / 'runs/val',  # save to project/name
-        name='exp',  # save to project/name
-        exist_ok=False,  # existing project/name ok, do not increment
-        half=True,  # use FP16 half-precision inference
-        dnn=False,  # use OpenCV DNN for ONNX inference
-        model=None,
-        dataloader=None,
-        save_dir=Path(''),
-        plots=True,
-        callbacks=Callbacks(),
-        compute_loss=None,
-        use_enot=False,
-        enot_weights=None,
-        ):
+def run(
+    data,
+    weights=None,  # model.pt path(s)
+    batch_size=32,  # batch size
+    imgsz=640,  # inference size (pixels)
+    conf_thres=0.001,  # confidence threshold
+    iou_thres=0.6,  # NMS IoU threshold
+    task='val',  # train, val, test, speed or study
+    device='',  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+    workers=8,  # max dataloader workers (per RANK in DDP mode)
+    single_cls=False,  # treat as single-class dataset
+    augment=False,  # augmented inference
+    verbose=False,  # verbose output
+    save_txt=False,  # save results to *.txt
+    save_hybrid=False,  # save label+prediction hybrid results to *.txt
+    save_conf=False,  # save confidences in --save-txt labels
+    save_json=False,  # save a COCO-JSON results file
+    project=ROOT / 'runs/val',  # save to project/name
+    name='exp',  # save to project/name
+    exist_ok=False,  # existing project/name ok, do not increment
+    half=True,  # use FP16 half-precision inference
+    dnn=False,  # use OpenCV DNN for ONNX inference
+    model=None,
+    dataloader=None,
+    save_dir=Path(''),
+    plots=True,
+    callbacks=Callbacks(),
+    compute_loss=None,
+    use_enot_lite=False,
+    enot_lite_weights=None,
+):
     # Initialize/load model and set device
     training = model is not None
     if training:  # called by train.py
@@ -149,14 +166,13 @@ def run(data,
         (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
         # Load model
-        if use_enot:
-            enot_model = BackendFactory().create(
-                enot_weights, 
-                BackendType.ORT_TENSORRT, 
-                model_type=ModelType.YOLO_V5, 
-                input_example=np.ones((batch_size, 3, imgsz, imgsz), 
-                dtype=np.float32),
-                )
+        if use_enot_lite:
+            enot_lite_model = BackendFactory().create(
+                enot_lite_weights,
+                BackendType.ORT_TENSORRT,
+                model_type=ModelType.YOLO_V5,
+                input_example=np.ones((batch_size, 3, imgsz, imgsz), dtype=np.float32),
+            )
             model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
 
         else:
@@ -189,8 +205,17 @@ def run(data,
         pad = 0.0 if task in ('speed', 'benchmark') else 0.5
         rect = False if task == 'benchmark' else pt  # square inference for benchmarks
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
-        dataloader = create_dataloader(data[task], imgsz, batch_size, stride, single_cls, pad=pad, rect=False,
-                                       workers=workers, prefix=colorstr(f'{task}: '))[0]
+        dataloader = create_dataloader(
+            data[task],
+            imgsz,
+            batch_size,
+            stride,
+            single_cls,
+            pad=pad,
+            rect=False,
+            workers=workers,
+            prefix=colorstr(f'{task}: '),
+        )[0]
 
     seen = 0
     confusion_matrix = ConfusionMatrix(nc=nc)
@@ -213,12 +238,12 @@ def run(data,
         dt[0] += t2 - t1
 
         # Inference
-        if use_enot:
-            #t1_tmp = time_sync()
+        if use_enot_lite:
+            # t1_tmp = time_sync()
             inp = im.cpu().numpy()
-            out, train_out = enot_model(inp)[0], []
+            out, train_out = enot_lite_model(inp)[0], []
             out = torch.tensor(out).to(device)
-            #t2_tmp = time_sync()
+            # t2_tmp = time_sync()
             # print(t2_tmp - t1_tmp)
         else:
             # print(im.shape)
@@ -301,10 +326,10 @@ def run(data,
             LOGGER.info(pf % (names[c], seen, nt[c], p[i], r[i], ap50[i], ap[i]))
 
     # Print speeds
-    t = tuple(x / seen * 1E3 for x in dt)  # speeds per image
-    if not training:
-        shape = (batch_size, 3, imgsz, imgsz)
-        LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {shape}' % t)
+    t = tuple(x / seen * 1e3 for x in dt)  # speeds per image
+    # if not training:
+    # shape = (batch_size, 3, imgsz, imgsz)
+    # LOGGER.info(f'Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS per image at shape {shape}' % t)
 
     # Plots
     if plots:
