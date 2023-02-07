@@ -49,7 +49,6 @@ LR = 0.06
 
 
 def main():
-
     HOME_DIR.mkdir(exist_ok=True)
     DATASETS_DIR.mkdir(exist_ok=True)
     PROJECT_DIR.mkdir(exist_ok=True)
@@ -120,7 +119,6 @@ def main():
         logging.info('')
 
     for epoch in range(N_EPOCHS):
-
         # Setting current epoch in DistributedSampler, see it's documentation:
         # https://pytorch.org/docs/stable/data.html, torch.utils.data.distributed.DistributedSampler class.
         if distributed:
@@ -143,7 +141,6 @@ def main():
         )
 
         for num_sample, inputs, labels in train_queue:
-
             with torch.no_grad():  # Initialize output distribution optimization.
                 if not search_space.output_distribution_optimization_enabled:
                     search_space.initialize_output_distribution_optimization(inputs)
@@ -166,7 +163,6 @@ def main():
                 scheduler.step()
 
         if is_local_master():  # Log training stats in each local master.
-
             train_loss = train_metrics_acc['loss'] / train_metrics_acc['n']
             train_accuracy = train_metrics_acc['accuracy'] / train_metrics_acc['n']
 
@@ -177,7 +173,6 @@ def main():
             logging.info(f'  accuracy: {train_accuracy:.2f}')
 
         if is_master():  # Validate only in master process.
-
             search_space.eval()
             validation_loss = 0
             validation_accuracy = 0
