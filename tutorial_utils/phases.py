@@ -29,7 +29,6 @@ def tutorial_pretrain_loop(
         raise TypeError('pretrain_optimizer must be instance of PretrainOptimizer')
 
     for epoch in range(epochs):
-
         print(f'EPOCH #{epoch}')
 
         search_space.train()
@@ -109,7 +108,6 @@ def tutorial_search_loop(
         raise TypeError('search_optimizer must be instance of SearchOptimizer')
 
     for epoch in range(epochs):
-
         print(f'EPOCH #{epoch}')
 
         search_space.train()
@@ -119,7 +117,6 @@ def tutorial_search_loop(
             'n': 0,
         }
         for inputs, labels in train_loader:
-
             if latency_type and search_space.latency_type is None:
                 latency_container = initialize_latency(latency_type, search_space, (inputs,))
                 print(f'Constant latency = {latency_container.constant_latency}')
@@ -199,7 +196,6 @@ def tutorial_train_loop(
     scheduler=None,
 ):
     for epoch in range(epochs):
-
         print(f'EPOCH #{epoch}')
 
         model.train()
