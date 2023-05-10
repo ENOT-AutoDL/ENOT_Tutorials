@@ -8,6 +8,7 @@ The only exception is:
 
 So, you should NOT use DistributedDataParallel in pretrain loop, as we do it's functionality in our code.
 For easier distributed package initialization you can use enot.utils.distributed.init_torch function.
+
 """
 
 import logging

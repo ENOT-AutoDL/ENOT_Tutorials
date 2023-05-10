@@ -16,7 +16,8 @@ def accuracy(
     target: torch.Tensor,
     topk: Tuple[int] = (1,),
 ) -> Union[torch.Tensor, List[torch.Tensor]]:
-    """Calculates prediction accuracy.
+    """
+    Calculates prediction accuracy.
 
     Parameters
     ----------
@@ -68,7 +69,8 @@ class _ApplyAndRestoreLR:
 
 
 class WarmupScheduler(Scheduler):
-    """Scales original learning rate scheduler values linearly for
+    """
+    Scales original learning rate scheduler values linearly for
     `warmup_steps` iterations.
 
     Notes

@@ -1,7 +1,6 @@
 # YOLOv5 🚀 by Ultralytics, GPL-3.0 license
 """
-Validate a trained YOLOv5 model accuracy on a custom dataset
-
+Validate a trained YOLOv5 model accuracy on a custom dataset.
 
 This is a modified version of YOLOv5 validation script.
 The modified file allows using enot-lite inference framework which can be configured to run
@@ -22,6 +21,7 @@ Usage - formats:
                                       yolov5s.pb                 # TensorFlow GraphDef
                                       yolov5s.tflite             # TensorFlow Lite
                                       yolov5s_edgetpu.tflite     # TensorFlow Edge TPU
+
 """
 
 import argparse
@@ -98,12 +98,22 @@ def save_one_json(predn, jdict, path, class_map):
 
 def process_batch(detections, labels, iouv):
     """
-    Return correct predictions matrix. Both sets of boxes are in (x1, y1, x2, y2) format.
-    Arguments:
-        detections (Array[N, 6]), x1, y1, x2, y2, conf, class
-        labels (Array[M, 5]), class, x1, y1, x2, y2
-    Returns:
-        correct (Array[N, 10]), for 10 IoU levels
+    Return correct predictions matrix.
+
+    Both sets of boxes are in (x1, y1, x2, y2) format.
+
+    Parameters
+    ----------
+    detections : Array[N, 6]
+        x1, y1, x2, y2, conf, class
+    labels : Array[M, 5]
+        class, x1, y1, x2, y2
+
+    Returns
+    -------
+    Array[N, 10]
+        Correct array for 10 IoU levels.
+
     """
     correct = torch.zeros(detections.shape[0], iouv.shape[0], dtype=torch.bool, device=iouv.device)
     iou = box_iou(labels[:, 1:], detections[:, :4])
