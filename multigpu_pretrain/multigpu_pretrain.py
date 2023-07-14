@@ -22,6 +22,7 @@ from tutorial_utils.dataset import create_imagenette_dataloaders
 from tutorial_utils.train import WarmupScheduler
 from tutorial_utils.train import accuracy
 
+import enot.logging
 from enot.distributed import extract_data_from_queue
 from enot.distributed import get_world_size
 from enot.distributed import init_torch
@@ -29,7 +30,6 @@ from enot.distributed import is_dist
 from enot.distributed import is_local_master
 from enot.distributed import is_master
 from enot.distributed import sync_model
-from enot.logging import prepare_log
 from enot.models import SearchSpaceModel
 from enot.models.mobilenet import build_mobilenet
 from enot.optimize import PretrainOptimizer
@@ -54,7 +54,7 @@ def main():
     DATASETS_DIR.mkdir(exist_ok=True)
     PROJECT_DIR.mkdir(exist_ok=True)
 
-    prepare_log(PROJECT_DIR / 'experiments' / 'multigpu_example_2x2_config_v1')
+    enot.logging.add_file_handler(PROJECT_DIR / 'experiments' / 'multigpu_example_2x2_config_v1')
 
     init_torch(cuda_optimize_for_speed=True)
     distributed = is_dist()
