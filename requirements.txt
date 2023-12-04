@@ -1,0 +1,6 @@
+pandas
+pillow
+pyyaml
+fvcore
+onnxruntime-gpu
+onnxsim

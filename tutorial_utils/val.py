@@ -3,7 +3,7 @@
 Validate a trained YOLOv5 model accuracy on a custom dataset.
 
 This is a modified version of YOLOv5 validation script.
-The modified file allows using enot-lite inference framework which can be configured to run
+The modified file allows using ONNX Runtime inference framework which can be configured to run
 YOLOv5 model on different devices with different optimizations.
 
 
@@ -33,7 +33,6 @@ from threading import Thread
 
 import numpy as np
 import torch
-from enot_lite.type import ModelType
 from tqdm import tqdm
 
 FILE = Path(__file__).resolve()
@@ -42,8 +41,6 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
 ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
 
-from enot_lite.backend import BackendFactory
-from enot_lite.type import BackendType
 from models.common import DetectMultiBackend
 from utils.callbacks import Callbacks
 from utils.dataloaders import create_dataloader
@@ -159,8 +156,7 @@ def run(
     plots=True,
     callbacks=Callbacks(),
     compute_loss=None,
-    use_enot_lite=False,
-    enot_lite_weights=None,
+    onnxruntime_sess=None,
 ):
     # Initialize/load model and set device
     training = model is not None
@@ -176,17 +172,7 @@ def run(
         (save_dir / 'labels' if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
         # Load model
-        if use_enot_lite:
-            enot_lite_model = BackendFactory().create(
-                enot_lite_weights,
-                BackendType.ORT_TENSORRT,
-                model_type=ModelType.YOLO_V5,
-                input_example=np.ones((batch_size, 3, imgsz, imgsz), dtype=np.float32),
-            )
-            model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
-
-        else:
-            model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
+        model = DetectMultiBackend(weights, device=device, dnn=dnn, data=data, fp16=half)
         stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine
         imgsz = check_img_size(imgsz, s=stride)  # check image size
         half = model.fp16  # FP16 supported on limited backends with CUDA
@@ -248,15 +234,9 @@ def run(
         dt[0] += t2 - t1
 
         # Inference
-        if use_enot_lite:
-            # t1_tmp = time_sync()
-            inp = im.cpu().numpy()
-            out, train_out = enot_lite_model(inp)[0], []
-            out = torch.tensor(out).to(device)
-            # t2_tmp = time_sync()
-            # print(t2_tmp - t1_tmp)
+        if onnxruntime_sess is not None:
+            out, train_out = onnxruntime_sess(im), []
         else:
-            # print(im.shape)
             out, train_out = model(im) if training else model(im, augment=augment, val=True)  # inference, loss outputs
         dt[1] += time_sync() - t2
 
