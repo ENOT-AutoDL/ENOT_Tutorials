@@ -5,10 +5,7 @@ from typing import Union
 
 import torch
 
-# Base PyTorch scheduler.
-# Added here to disable PyCharm warning everywhere.
-# noinspection PyProtectedMember
-Scheduler = torch.optim.lr_scheduler._LRScheduler
+Scheduler = torch.optim.lr_scheduler._LRScheduler  # pylint: disable=protected-access
 
 
 def accuracy(
@@ -22,8 +19,7 @@ def accuracy(
     Parameters
     ----------
     prediction : Tensor
-        Batch with logits or probabilities from model, of shape
-        `ё`(batch_size, num_classes)`.
+        Batch with logits or probabilities from model, of shape `(batch_size, num_classes)`.
     target : Tensor
         Batch with target class labels.
     topk : tuple of int's
@@ -58,13 +54,14 @@ class _ApplyAndRestoreLR:
         self.saved_lr = [group['lr'] for group in optimizer.param_groups]
 
     def _apply_lr(self, lr_to_apply: List[float]) -> None:
-        for group, lr in zip(self.optimizer.param_groups, lr_to_apply):
-            group['lr'] = lr
+        for group, learning_rate in zip(self.optimizer.param_groups, lr_to_apply):
+            group['lr'] = learning_rate
 
     def __enter__(self):
         self._apply_lr(self.new_lr)
 
     def __exit__(self, *args, **kwargs):
+        del args, kwargs
         self._apply_lr(self.saved_lr)
 
 
@@ -101,28 +98,84 @@ class WarmupScheduler(Scheduler):
         self.warmup_steps = warmup_steps
         self.scheduler = scheduler
 
-        # noinspection PyUnresolvedReferences
         super().__init__(self.scheduler.optimizer)
 
     def get_lr(self) -> List[float]:
-        # This function has a lof of noinspection stuff because of the wrong
-        # _LRScheduler description in the lr_scheduler.pyi PyTorch file.
-
         if self.warmup_steps == 0:
             return self.scheduler.get_last_lr()
 
-        # noinspection PyUnresolvedReferences
         scale = min(self.last_epoch / self.warmup_steps, 1.0)
-        # noinspection PyUnresolvedReferences
         scaled_lr = [lr * scale for lr in self.scheduler.get_last_lr()]
 
         return scaled_lr
 
     def step(self, epoch: Optional[int] = None) -> None:
         # we must skip self.scheduler.step() in __init__
-        if self._step_count != 0:
-            # noinspection PyUnresolvedReferences
+        if self._step_count != 0:  # type: ignore
             with _ApplyAndRestoreLR(self.optimizer, self.scheduler.get_last_lr()):
                 self.scheduler.step(epoch)
 
         super().step(epoch)
+
+
+def tutorial_train_loop(
+    epochs,
+    model,
+    optimizer,
+    metric_function,
+    loss_function,
+    train_loader,
+    validation_loader,
+    scheduler=None,
+) -> None:
+    """Simple train loop."""
+    for epoch in range(epochs):
+        print(f'EPOCH #{epoch}')
+
+        model.train()
+        train_loss = 0.0
+        train_accuracy = 0.0
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+
+            pred_labels = model(inputs)
+            batch_loss = loss_function(pred_labels, labels)
+            batch_loss.backward()
+            batch_metric = metric_function(pred_labels, labels)
+
+            train_loss += batch_loss.item()
+            train_accuracy += batch_metric.item()
+
+            optimizer.step()
+            if scheduler is not None:
+                scheduler.step()
+
+        n_batches = len(train_loader)
+        train_loss /= n_batches
+        train_accuracy /= n_batches
+
+        print('train metrics:')
+        print('  loss:', train_loss)
+        print('  accuracy:', train_accuracy)
+
+        model.eval()
+        validation_loss = 0
+        validation_accuracy = 0
+        with torch.no_grad():
+            for inputs, labels in validation_loader:
+                pred_labels = model(inputs)
+                batch_loss = loss_function(pred_labels, labels)
+                batch_metric = metric_function(pred_labels, labels)
+
+                validation_loss += batch_loss.item()
+                validation_accuracy += batch_metric.item()
+
+        n_batches = len(validation_loader)
+        validation_loss /= n_batches
+        validation_accuracy /= n_batches
+
+        print('validation metrics:')
+        print('  loss:', validation_loss)
+        print('  accuracy:', validation_accuracy)
+
+        print()
