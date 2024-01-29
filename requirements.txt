@@ -4,3 +4,6 @@ pyyaml
 fvcore
 onnxruntime-gpu
 onnxsim
+openvino==2023.2.0
+openvino-dev==2023.2.0
+ultralytics==8.0.199
