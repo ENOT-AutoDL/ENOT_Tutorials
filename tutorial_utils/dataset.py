@@ -25,7 +25,7 @@ from torchvision.datasets import ImageFolder
 from torchvision.transforms.functional import InterpolationMode
 
 from enot.utils.common import is_floating_tensor
-from enot.utils.python_container_parser import apply_to_non_containers
+from enot.utils.python_container_parser import apply_to_containers_recursively
 
 _MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 _STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
@@ -144,7 +144,7 @@ def recursive_to(
 
         return _item
 
-    return apply_to_non_containers(item, to_fn, apply_to_self=True)
+    return apply_to_containers_recursively(item, to_fn, apply_to_self=True)
 
 
 class CudaDataLoader(DataLoader):
