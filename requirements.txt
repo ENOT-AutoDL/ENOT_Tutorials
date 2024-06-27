@@ -2,8 +2,9 @@ pandas
 pillow
 pyyaml
 fvcore
-onnxruntime-gpu
+onnxruntime-gpu==1.17.*
 onnxsim
 openvino==2023.2.0
 openvino-dev==2023.2.0
+tensorrt==8.6.*
 ultralytics==8.0.199
